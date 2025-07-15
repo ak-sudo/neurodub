@@ -5,7 +5,7 @@ const fs = require("fs");
 const FormData = require("form-data");
 const axios = require("axios");
 const path = require("path");
-require("dotenv").config();
+require("dotenv").config({ override: true });
 const videoRoute = require("./routes/video");
 
 const app = express();
