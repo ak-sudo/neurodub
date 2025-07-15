@@ -11,7 +11,7 @@ const videoRoute = require("./routes/video");
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
+const ELEVENLABS_API_KEY = sk_ace2584939b0bdf40c0408c9b3f0fe0558d7af5c89e8e0cc || process.env.ELEVENLABS_API_KEY;
 const uploadsDir = path.join(__dirname, "uploads");
 const dubsDir = path.join(__dirname, "dubs");
 
