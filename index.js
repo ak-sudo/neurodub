@@ -20,7 +20,9 @@ if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
 if (!fs.existsSync(dubsDir)) fs.mkdirSync(dubsDir);
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: "*", // For testing. Restrict to your frontend domain in prod
+}));
 app.use(express.json());
 app.use("/dubs", express.static(dubsDir));
 
