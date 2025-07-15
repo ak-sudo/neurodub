@@ -151,10 +151,10 @@ MIT License © 2025 NeuroDub.ai
 
 ## 🔗 Useful Links
 
-- [Official Site](https://neurodub.app) *(coming soon)*
-- [Project Poster](./src/assets/poster.png)
-- [Logo Pack](./src/assets/logo/)
-- [Demo Video](./src/assets/demo.mp4)
+- [Official Site](https://neurodub.netlify.app) *(Under Development)*
+- [Project Poster]*(Coming Soon)*
+- [Logo Pack]()*(Coming Soon)*
+- [Demo Video]()*(Coming Soon)*
 
 ---
 
