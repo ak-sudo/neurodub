@@ -113,4 +113,5 @@ app.post("/dub", upload.single("file"), async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
+  console.log(ELEVENLABS_API_KEY)
 });
