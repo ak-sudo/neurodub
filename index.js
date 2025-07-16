@@ -83,8 +83,16 @@ app.post("/dub", upload.single("file"), async (req, res) => {
     // Step 5: Return final URL
     res.json({ success: true, dubbedUrl: uploaded.secure_url });
   } catch (err) {
-    console.error("Dubbing failed:", err);
-    res.status(500).json({ success: false, error: "Dubbing failed" });
+   console.error("Dubbing failed:");
+  if (err.response) {
+    console.error("Status:", err.response.status);
+    console.error("Headers:", err.response.headers);
+    console.error("Data:", err.response.data);
+  } else {
+    console.error(err.message);
+  }
+  res.status(500).json({ success: false, error: "Dubbing failed" });
+}
   }
 });
 
