@@ -7,40 +7,29 @@ const axios = require("axios");
 const path = require("path");
 require("dotenv").config();
 const videoRoute = require("./routes/video");
+const { upload, cloudinary } = require("./cloudinary");
 
 const app = express();
-const PORT = process.env.PORT || 4000;
-
-const elevenLabApiKey = process.env.ELEVENLABS_API_KEY;
-const uploadsDir = path.join(__dirname, "uploads");
-const dubsDir = path.join(__dirname, "dubs");
-
-// Ensure necessary directories exist
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
-if (!fs.existsSync(dubsDir)) fs.mkdirSync(dubsDir);
+const PORT = process.env.PORT || 8080;
+const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 
 // Middleware
-app.use(cors({
-  origin: "*", // For testing. Restrict to your frontend domain in prod
-}));
+app.use(cors());
 app.use(express.json());
-app.use("/dubs", express.static(dubsDir));
-
-// Video route
 app.use("/stream", videoRoute);
-
-const upload = multer({ dest: uploadsDir });
 
 app.post("/dub", upload.single("file"), async (req, res) => {
   try {
-    const filePath = req.file.path;
-    const fileStream = fs.createReadStream(filePath);
     const targetLang = req.body.toLang;
     const sourceLang = req.body.fromLang;
+    const cloudinaryUrl = req.file.path;
 
-    // Step 1: Submit dubbing request
+    // Step 1: Download video stream from Cloudinary
+    const videoResp = await axios.get(cloudinaryUrl, { responseType: "stream" });
+
+    // Step 2: Submit dubbing request to ElevenLabs
     const form = new FormData();
-    form.append("file", fileStream, {
+    form.append("file", videoResp.data, {
       filename: req.file.originalname,
       contentType: req.file.mimetype || "video/mp4",
     });
@@ -48,16 +37,13 @@ app.post("/dub", upload.single("file"), async (req, res) => {
     form.append("target_lang", targetLang);
     form.append("watermark", JSON.stringify(true));
 
-    console.log("✅ File uploaded to:", req.file.path);
-
-    
     const startRes = await axios.post(
       "https://api.elevenlabs.io/v1/dubbing",
       form,
       {
         headers: {
           ...form.getHeaders(),
-          "xi-api-key": elevenLabApiKey,
+          "xi-api-key": ELEVENLABS_API_KEY,
         },
       }
     );
@@ -65,12 +51,12 @@ app.post("/dub", upload.single("file"), async (req, res) => {
     const { dubbing_id } = startRes.data;
     const pollUrl = `https://api.elevenlabs.io/v1/dubbing/${dubbing_id}`;
 
-    // Step 2: Poll until dubbing is ready
+    // Step 3: Poll until dubbed
     let status = "queued";
     while (status !== "dubbed") {
-      await new Promise((resolve) => setTimeout(resolve, 3000)); // Wait 3s
+      await new Promise((resolve) => setTimeout(resolve, 3000));
       const pollRes = await axios.get(pollUrl, {
-        headers: { "xi-api-key": elevenLabApiKey },
+        headers: { "xi-api-key": ELEVENLABS_API_KEY },
       });
       status = pollRes.data.status;
 
@@ -79,47 +65,53 @@ app.post("/dub", upload.single("file"), async (req, res) => {
       }
     }
 
-    // Step 3: Download final dubbed video
+    // Step 4: Get dubbed video stream
     const audioUrl = `https://api.elevenlabs.io/v1/dubbing/${dubbing_id}/audio/${targetLang}`;
-    const videoRes = await axios.get(audioUrl, {
-      headers: { "xi-api-key": elevenLabApiKey },
-      responseType: "arraybuffer",
+    const dubbedRes = await axios.get(audioUrl, {
+      headers: { "xi-api-key": ELEVENLABS_API_KEY },
+      responseType: "stream",
     });
 
-    const outputFilename = `dubbed-${Date.now()}.mp4`;
-    const outputPath = path.join(dubsDir, outputFilename);
-    fs.writeFileSync(outputPath, videoRes.data);
-
-    // Schedule deletion in 2 minutes (120,000 ms)
-    setTimeout(() => {
-      fs.unlink(outputPath, (err) => {
-        if (err) {
-          console.error(`Failed to delete ${outputPath}:`, err);
-        } else {
-          console.log(`Deleted ${outputPath}`);
+    // Step 5: Upload dubbed video to Cloudinary
+    const uploaded = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: "neurodub/dubs",
+          resource_type: "video",
+          format: "mp4",
+          public_id: `dubbed-${Date.now()}-${req.file.originalname}`,
+        },
+        (error, result) => {
+          if (error) return reject(error);
+          resolve(result);
         }
-      });
-    }, 2 * 60 * 1000); // 2 minutes
+      );
+      dubbedRes.data.pipe(uploadStream);
+    });
 
-    // Cleanup
-    fs.unlinkSync(filePath);
+    // Step 6: Schedule deletion from Cloudinary
+    setTimeout(async () => {
+      try {
+        await cloudinary.uploader.destroy(uploaded.public_id, {
+          resource_type: "video",
+        });
+        console.log(`Deleted dubbed video from Cloudinary: ${uploaded.public_id}`);
+      } catch (err) {
+        console.error("Failed to delete dubbed video from Cloudinary:", err.message);
+      }
+    }, 2 * 60 * 60 * 1000); // 2 hours
 
+    // Step 7: Respond with dubbed video URL
     res.json({
       success: true,
-      dubbedFile: `/dubs/${outputFilename}`,
+      dubbedUrl: uploaded.secure_url,
     });
   } catch (err) {
     console.error("Dubbing failed:", err.message || err);
-    console.log("Dubbing Failed Error : ",err)
-    // res.status(500).json({ success: false, error: "Dubbing failed" });
+    res.status(500).json({ success: false, error: "Dubbing failed" });
   }
 });
 
-app.get("/",(req,res)=>{
-  res.send("Welcome!")
-});
-
 app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-  console.log(elevenLabApiKey)
+  console.log(`Server running at port - ${PORT}`);
 });
