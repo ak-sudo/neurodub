@@ -48,6 +48,9 @@ app.post("/dub", upload.single("file"), async (req, res) => {
     form.append("target_lang", targetLang);
     form.append("watermark", JSON.stringify(true));
 
+    console.log("✅ File uploaded to:", req.file.path);
+
+    
     const startRes = await axios.post(
       "https://api.elevenlabs.io/v1/dubbing",
       form,
