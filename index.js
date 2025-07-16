@@ -48,6 +48,11 @@ app.post("/dub", upload.single("file"), async (req, res) => {
       }
     );
 
+    
+    if (!startRes.data || !startRes.data.dubbing_id) {
+      throw new Error("Failed to start dubbing process.");
+    }
+
     const { dubbing_id } = startRes.data;
     const pollUrl = `https://api.elevenlabs.io/v1/dubbing/${dubbing_id}`;
 
