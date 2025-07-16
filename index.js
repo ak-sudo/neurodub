@@ -93,7 +93,6 @@ app.post("/dub", upload.single("file"), async (req, res) => {
   }
   res.status(500).json({ success: false, error: "Dubbing failed" });
 }
-  }
 });
 
 app.listen(PORT, () => {
