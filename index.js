@@ -112,6 +112,10 @@ app.post("/dub", upload.single("file"), async (req, res) => {
   }
 });
 
+app.get("/debug-env", (req, res) => {
+  res.json({ key: process.env.ELEVENLABS_API_KEY ? "Loaded" : "Not Found" });
+});
+
 app.listen(PORT, () => {
   console.log(`Server running at port - ${PORT}`);
 });
