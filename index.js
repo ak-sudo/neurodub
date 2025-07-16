@@ -116,6 +116,20 @@ app.get("/debug-env", (req, res) => {
   res.json({ key: process.env.ELEVENLABS_API_KEY ? "Loaded" : "Not Found" });
 });
 
+app.get("/test-elevenlabs", async (req, res) => {
+  try {
+    const test = await axios.get("https://api.elevenlabs.io/v1/models", {
+      headers: {
+        "xi-api-key": process.env.ELEVENLABS_API_KEY,
+      },
+    });
+    res.json({ success: true, models: test.data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+
 app.listen(PORT, () => {
   console.log(`Server running at port - ${PORT}`);
 });
