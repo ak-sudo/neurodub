@@ -5,13 +5,13 @@ const fs = require("fs");
 const FormData = require("form-data");
 const axios = require("axios");
 const path = require("path");
-require("dotenv").config({ override: true });
+require("dotenv").config();
 const videoRoute = require("./routes/video");
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-const ELEVENLABS_API_KEY = 'sk_81025f3853f791f6723c3e1a4977caa06db58b1abdced24d' || process.env.ELEVENLABS_API_KEY;
+const elevenLabApiKey = process.env.ELEVENLABS_API_KEY;
 const uploadsDir = path.join(__dirname, "uploads");
 const dubsDir = path.join(__dirname, "dubs");
 
@@ -54,7 +54,7 @@ app.post("/dub", upload.single("file"), async (req, res) => {
       {
         headers: {
           ...form.getHeaders(),
-          "xi-api-key": ELEVENLABS_API_KEY,
+          "xi-api-key": elevenLabApiKey,
         },
       }
     );
@@ -67,7 +67,7 @@ app.post("/dub", upload.single("file"), async (req, res) => {
     while (status !== "dubbed") {
       await new Promise((resolve) => setTimeout(resolve, 3000)); // Wait 3s
       const pollRes = await axios.get(pollUrl, {
-        headers: { "xi-api-key": ELEVENLABS_API_KEY },
+        headers: { "xi-api-key": elevenLabApiKey },
       });
       status = pollRes.data.status;
 
@@ -79,7 +79,7 @@ app.post("/dub", upload.single("file"), async (req, res) => {
     // Step 3: Download final dubbed video
     const audioUrl = `https://api.elevenlabs.io/v1/dubbing/${dubbing_id}/audio/${targetLang}`;
     const videoRes = await axios.get(audioUrl, {
-      headers: { "xi-api-key": ELEVENLABS_API_KEY },
+      headers: { "xi-api-key": elevenLabApiKey },
       responseType: "arraybuffer",
     });
 
@@ -107,11 +107,12 @@ app.post("/dub", upload.single("file"), async (req, res) => {
     });
   } catch (err) {
     console.error("Dubbing failed:", err.message || err);
-    res.status(500).json({ success: false, error: "Dubbing failed" });
+    console.log("Dubbing Failed Error : ",err)
+    // res.status(500).json({ success: false, error: "Dubbing failed" });
   }
 });
 
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
-  console.log(ELEVENLABS_API_KEY)
+  console.log(elevenLabApiKey)
 });
